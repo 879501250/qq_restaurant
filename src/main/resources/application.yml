@@ -6,7 +6,7 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/qq_edu?serverTimezone=UTC
+      url: jdbc:mysql://localhost:3306/qq_restaurant?serverTimezone=UTC
       username: root
       password: 123456
 mybatis-plus:
