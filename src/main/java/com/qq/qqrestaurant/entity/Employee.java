@@ -17,7 +17,7 @@ public class Employee implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // 修复long型数据 传到前端js 精度问题
-    @JsonSerialize(using = ToStringSerializer.class)
+    // @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     private String username;
