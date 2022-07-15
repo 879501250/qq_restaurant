@@ -24,9 +24,15 @@ public class GlobalExceptionHandler {
         log.error(ex.getMessage());
 
         if (ex.getMessage().contains("Duplicate entry")) {
-            return R.error("用户名 '" + ex.getMessage().split("'")[1] + "' 已存在~");
+            return R.error("'" + ex.getMessage().split("'")[1] + "' 已存在~");
         }
 
         return R.error("未知错误");
+    }
+
+    @ExceptionHandler(CustomException.class)
+    public R<String> exceptionHandler(CustomException ex) {
+        log.error(ex.getMessage());
+        return R.error(ex.getMessage());
     }
 }

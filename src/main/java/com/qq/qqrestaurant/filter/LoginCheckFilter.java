@@ -1,6 +1,7 @@
 package com.qq.qqrestaurant.filter;
 
 import com.alibaba.fastjson.JSON;
+import com.qq.qqrestaurant.common.BaseContext;
 import com.qq.qqrestaurant.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
@@ -44,8 +45,13 @@ public class LoginCheckFilter implements Filter {
         }
         // 已登录
         if (request.getSession().getAttribute("employee") != null) {
-            filterChain.doFilter(request, response);
             log.info("拦截到请求：{} 已登录", uri);
+
+            // 保存当前登录用户id
+            BaseContext.setCurrentId((Long) request.getSession().getAttribute("employee"));
+
+            filterChain.doFilter(request, response);
+
             return;
         }
         // 未登录，通过输出流方式向客户端页面相应数据，前端检测到 NOTLOGIN 则自动返回登录页
