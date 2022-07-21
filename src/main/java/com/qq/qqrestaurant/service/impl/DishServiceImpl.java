@@ -3,17 +3,15 @@ package com.qq.qqrestaurant.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.qq.qqrestaurant.common.CustomException;
 import com.qq.qqrestaurant.common.R;
 import com.qq.qqrestaurant.dto.DishDto;
-import com.qq.qqrestaurant.entity.Category;
-import com.qq.qqrestaurant.entity.Dish;
-import com.qq.qqrestaurant.entity.DishFlavor;
+import com.qq.qqrestaurant.entity.*;
 import com.qq.qqrestaurant.mapper.DishMapper;
-import com.qq.qqrestaurant.service.CategoryService;
-import com.qq.qqrestaurant.service.DishFlavorService;
-import com.qq.qqrestaurant.service.DishService;
+import com.qq.qqrestaurant.service.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -27,6 +25,8 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     private DishFlavorService dishFlavorService;
     @Resource
     private CategoryService categoryService;
+    @Resource
+    private SetmealService setmealService;
 
     /**
      * 查询某一分类的菜品数量
@@ -80,14 +80,25 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     @Override
     public R getList(Long categoryId) {
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Dish::getCategoryId, categoryId);
+        queryWrapper.eq(categoryId != null, Dish::getCategoryId, categoryId);
         queryWrapper.eq(Dish::getIsDeleted, 0);
+        queryWrapper.eq(Dish::getStatus, 1);
+        queryWrapper.orderByAsc(Dish::getSort);
+        queryWrapper.orderByDesc(Dish::getUpdateTime);
         List<Dish> dishes = this.list(queryWrapper);
 
-        return R.success(dishes);
+        List<DishDto> dishDtos = dishes.stream().map(dish -> {
+            DishDto dishDto = new DishDto();
+            BeanUtils.copyProperties(dish, dishDto);
+            dishDto.setFlavors(dishFlavorService.getByDishId(dish.getId()));
+            return dishDto;
+        }).collect(Collectors.toList());
+
+        return R.success(dishDtos);
     }
 
     @Override
+    @Transactional
     public R update(DishDto dishDto) {
         this.updateById(dishDto);
         dishFlavorService.removeByDishId(dishDto.getId());
@@ -101,9 +112,18 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     }
 
     @Override
+    @Transactional
     public R updateDishStatus(Integer status, List<Long> ids) {
         Dish dish;
         for (Long id : ids) {
+            if (status == 0) {
+                List<Setmeal> setmeals = setmealService.getByDishId(id);
+                for (Setmeal setmeal : setmeals) {
+                    if (setmeal.getStatus() == 1) {
+                        throw new CustomException("存在未停售的关联套餐：" + setmeal.getName());
+                    }
+                }
+            }
             dish = new Dish();
             dish.setId(id);
             dish.setStatus(status);
@@ -113,9 +133,19 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     }
 
     @Override
+    @Transactional
     public R delDish(ArrayList<Long> ids) {
         Dish dish;
         for (Long id : ids) {
+            List<Setmeal> setmeals = setmealService.getByDishId(id);
+            if (setmeals.size() > 0) {
+                String name = "";
+                for (Setmeal setmeal : setmeals) {
+                    name += setmeal.getName() + ",";
+                }
+                name = name.substring(0, name.length() - 1);
+                throw new CustomException("存在未删除的关联套餐：" + name);
+            }
             dish = new Dish();
             dish.setId(id);
             dish.setIsDeleted(1);

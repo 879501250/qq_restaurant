@@ -2,6 +2,7 @@ package com.qq.qqrestaurant.controller;
 
 import com.qq.qqrestaurant.common.R;
 import com.qq.qqrestaurant.dto.SetmealDto;
+import com.qq.qqrestaurant.entity.Setmeal;
 import com.qq.qqrestaurant.service.SetmealService;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,5 +53,15 @@ public class SetmealController {
             idList.add(Long.parseLong(split[i]));
         }
         return setmealService.delSetmeal(idList);
+    }
+
+    @GetMapping("/list")
+    public R getList(Setmeal setmeal){
+        return R.success(setmealService.getList(setmeal));
+    }
+
+    @GetMapping("/dish/{id}")
+    public R getDish(@PathVariable Long id){
+        return R.success(setmealService.getDish(id));
     }
 }

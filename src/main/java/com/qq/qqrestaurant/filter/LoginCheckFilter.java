@@ -36,7 +36,10 @@ public class LoginCheckFilter implements Filter {
                 "/employee/login",
                 "/employee/logout",
                 "/backend/**",
-                "/front/**"
+                "/front/**",
+                "/common/**",
+                "/user/sendMsg", // 移动端发送短信
+                "/user/login" // 移动端登录
         };
         if (check(urls, uri)) {
             filterChain.doFilter(request, response);
@@ -49,6 +52,17 @@ public class LoginCheckFilter implements Filter {
 
             // 保存当前登录用户id
             BaseContext.setCurrentId((Long) request.getSession().getAttribute("employee"));
+
+            filterChain.doFilter(request, response);
+
+            return;
+        }
+        // 已登录
+        if (request.getSession().getAttribute("user") != null) {
+            log.info("拦截到请求：{} 已登录", uri);
+
+            // 保存当前登录用户id
+            BaseContext.setCurrentId((Long) request.getSession().getAttribute("user"));
 
             filterChain.doFilter(request, response);
 

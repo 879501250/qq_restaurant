@@ -3,17 +3,21 @@ package com.qq.qqrestaurant.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.qq.qqrestaurant.common.CustomException;
 import com.qq.qqrestaurant.common.R;
 import com.qq.qqrestaurant.dto.SetmealDto;
 import com.qq.qqrestaurant.entity.Category;
+import com.qq.qqrestaurant.entity.Dish;
 import com.qq.qqrestaurant.entity.Setmeal;
 import com.qq.qqrestaurant.entity.SetmealDish;
 import com.qq.qqrestaurant.mapper.SetmealMapper;
 import com.qq.qqrestaurant.service.CategoryService;
+import com.qq.qqrestaurant.service.DishService;
 import com.qq.qqrestaurant.service.SetmealDishService;
 import com.qq.qqrestaurant.service.SetmealService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -28,6 +32,8 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     private SetmealDishService setmealDishService;
     @Resource
     private CategoryService categoryService;
+    @Resource
+    private DishService dishService;
 
     /**
      * 查询某一分类的套餐数量
@@ -110,9 +116,21 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     }
 
     @Override
+    @Transactional
     public R updateSetmealStatus(Integer status, List<Long> ids) {
         Setmeal setmeal;
         for (Long id : ids) {
+            if (status == 1) {
+                LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(SetmealDish::getSetmealId, id);
+                List<SetmealDish> setmealDishes = setmealDishService.list(queryWrapper);
+                for (SetmealDish setmealDish : setmealDishes) {
+                    Dish dish = dishService.getById(setmealDish.getDishId());
+                    if (dish.getStatus() != 1) {
+                        throw new CustomException("菜品：" + dish.getName() + "未启售~");
+                    }
+                }
+            }
             setmeal = new Setmeal();
             setmeal.setId(id);
             setmeal.setStatus(status);
@@ -131,5 +149,37 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
             this.updateById(setmeal);
         }
         return R.success("删除套餐成功~");
+    }
+
+    @Override
+    public List<Setmeal> getByDishId(Long dishId) {
+        List<Setmeal> setmeals = new ArrayList<>();
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getDishId, dishId);
+        List<SetmealDish> setmealDishes = setmealDishService.list(queryWrapper);
+        if (setmealDishes.size() > 0) {
+            ArrayList<Long> ids = new ArrayList<>();
+            for (SetmealDish setmealDish : setmealDishes) {
+                ids.add(setmealDish.getSetmealId());
+            }
+            LambdaQueryWrapper<Setmeal> queryWrapper1 = new LambdaQueryWrapper<>();
+            queryWrapper1.in(Setmeal::getId, ids);
+            queryWrapper1.eq(Setmeal::getIsDeleted, 0);
+            setmeals = this.list(queryWrapper1);
+        }
+        return setmeals;
+    }
+
+    @Override
+    public List<Setmeal> getList(Setmeal setmeal) {
+        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(setmeal.getCategoryId() != null, Setmeal::getCategoryId, setmeal.getCategoryId());
+        queryWrapper.eq(setmeal.getStatus() != null, Setmeal::getStatus, setmeal.getStatus());
+        return this.list(queryWrapper);
+    }
+
+    @Override
+    public Dish getDish(Long id) {
+        return dishService.getById(id);
     }
 }

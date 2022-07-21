@@ -38,8 +38,8 @@ public class CategoryController {
     }
 
     @GetMapping("/list")
-    public R list(int type) {
-        return categoryService.list(type);
+    public R list(Category category) {
+        return categoryService.list(category);
     }
 
 }

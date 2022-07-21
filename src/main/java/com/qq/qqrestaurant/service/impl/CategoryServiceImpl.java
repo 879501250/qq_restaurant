@@ -52,24 +52,24 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
 
     @Override
     public R<String> delCategory(Long ids) {
-        if(dishService.countCategory(ids)>0){
+        if (dishService.countCategory(ids) > 0) {
             throw new CustomException("当前分类已关联菜品，无法删除~");
         }
 
-        if(setmealService.countCategory(ids)>0){
+        if (setmealService.countCategory(ids) > 0) {
             throw new CustomException("当前分类已关联套餐，无法删除~");
         }
 
-        if(this.removeById(ids)){
+        if (this.removeById(ids)) {
             return R.success("删除分类成功~");
         }
         return R.error("删除分类失败~");
     }
 
     @Override
-    public R list(int type) {
+    public R list(Category category) {
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Category::getType, type);
+        queryWrapper.eq(category.getType() != null, Category::getType, category.getType());
         queryWrapper.orderByAsc(Category::getSort).orderByDesc(Category::getUpdateTime);
         return R.success(this.list(queryWrapper));
     }
